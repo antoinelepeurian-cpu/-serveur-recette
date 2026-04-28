@@ -102,6 +102,6 @@ Vérifier silencieusement avant de répondre : ordre logique, températures pré
   res.json({ recette: message.content[0].text });
 });
 
-app.listen(3000, () => {
-  console.log('Serveur lancé sur le port 3000');
+app.listen(process.env.PORT || 3000, () => {
+  console.log('Serveur lancé sur le port ' + (process.env.PORT || 3000));
 });
