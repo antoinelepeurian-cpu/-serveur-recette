@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 app.get('/', (req, res) => {
   res.send('Serveur recette OK !');
-});;
+});
 
 const client = new Anthropic({
  apiKey: process.env.ANTHROPIC_API_KEY,
