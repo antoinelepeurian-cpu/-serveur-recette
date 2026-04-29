@@ -4,7 +4,8 @@ const Anthropic = require('@anthropic-ai/sdk');
 
 const app = express();
 app.use(cors());
-app.use(express.json())app.get('/', (req, res) => {
+app.use(express.json());
+app.get('/', (req, res) => {
   res.send('Serveur recette OK !');
 });;
 
