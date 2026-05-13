@@ -1,6 +1,6 @@
 ﻿const express = require('express');
 const Anthropic = require('@anthropic-ai/sdk');
-require('dotenv').config();
+if (process.env.NODE_ENV !== 'production') require('dotenv').config();
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -8,7 +8,8 @@ app.use(express.json({ limit: '10mb' }));
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 app.post('/recette', async (req, res) => {
-  const { ingredients, envie, placard, derniereFormeRef, airfryer } = req.body;
+  const { ingredients, envie, placard, derniereFormeRef, airfryer, personnes } = req.body;
+console.log('Personnes reçues:', personnes);
   try {
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
@@ -19,6 +20,11 @@ La recette doit être simple mais jamais plate : peu d'ingrédients, bonne organ
 
 🥕 INGRÉDIENTS DISPONIBLES
 ${ingredients}
+
+👥 NOMBRE DE PERSONNES
+${personnes || 2} personne(s) — adapte toutes les quantités en conséquence.
+Tu DOIS obligatoirement écrire le nombre de personnes entre parenthèses juste après le titre.
+Exemple obligatoire : # Poulet rôti (pour ${personnes || 2} personnes)
 
 🍽️ ENVIE / STYLE DU MOMENT
 ${envie || 'une recette savoureuse'}
