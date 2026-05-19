@@ -8,7 +8,7 @@ app.use(express.json({ limit: '10mb' }));
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 app.post('/recette', async (req, res) => {
-  const { ingredients, envie, placard, derniereFormeRef, airfryer, personnes } = req.body;
+  const { ingredients, envie, placard, derniereFormeRef, airfryer, personnes, materiel } = req.body;
 console.log('Personnes reçues:', personnes);
   try {
     const message = await client.messages.create({
@@ -20,6 +20,9 @@ La recette doit être simple mais jamais plate : peu d'ingrédients, bonne organ
 
 🥕 INGRÉDIENTS DISPONIBLES
 ${ingredients}
+
+🔧 MATÉRIEL DISPONIBLE
+${materiel || 'Non renseigné'}
 
 👥 NOMBRE DE PERSONNES
 ${personnes || 2} personne(s) — adapte toutes les quantités en conséquence.
