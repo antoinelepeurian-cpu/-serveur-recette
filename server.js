@@ -3,12 +3,20 @@ const Anthropic = require('@anthropic-ai/sdk');
 if (process.env.NODE_ENV !== 'production') require('dotenv').config();
 
 const app = express();
+const compteurs = {};
 app.use(express.json({ limit: '10mb' }));
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 app.post('/recette', async (req, res) => {
-  const { ingredients, envie, placard, derniereFormeRef, airfryer, personnes, materiel } = req.body;
+  const { ingredients, envie, placard, derniereFormeRef, airfryer, personnes, materiel, deviceId } = req.body;
+  const today = new Date().toISOString().split('T')[0];
+  if (!compteurs[deviceId]) compteurs[deviceId] = { date: today, count: 0 };
+  if (compteurs[deviceId].date !== today) compteurs[deviceId] = { date: today, count: 0 };
+  if (compteurs[deviceId].count >= 1) {
+    return res.json({ limite: true, message: 'Limite gratuite atteinte' });
+  }
+  compteurs[deviceId].count++;
 console.log('Personnes reçues:', personnes);
   try {
     const message = await client.messages.create({
