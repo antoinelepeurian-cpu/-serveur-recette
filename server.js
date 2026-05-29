@@ -4,16 +4,80 @@ if (process.env.NODE_ENV !== 'production') require('dotenv').config();
 
 const app = express();
 const compteurs = {};
+
+// Liste des testeurs avec leurs codes
+const testeurs = [
+  { email: 'alise.ozolina@gmail.com', code: 'TEST01', used: false },
+  { email: 'antoinelepeurian@gmail.com', code: 'TEST02', used: false },
+  { email: 'aurelie.riotte@gmail.com', code: 'TEST03', used: false },
+  { email: 'barbay.fabien76@gmail.com', code: 'TEST04', used: false },
+  { email: 'beatricelepeurian@gmail.com', code: 'TEST05', used: false },
+  { email: 'bengaillon@yahoo.fr', code: 'TEST06', used: false },
+  { email: 'cavymarion@gmail.com', code: 'TEST07', used: false },
+  { email: 'claireflorianleo@gmail.com', code: 'TEST08', used: false },
+  { email: 'david.matias0330@orange.fr', code: 'TEST09', used: false },
+  { email: 'derrienguillaumecl@gmail.com', code: 'TEST10', used: false },
+  { email: 'ea.aie.aue@gmail.com', code: 'TEST11', used: false },
+  { email: 'gregory.griffin@dalkiafroidsolutions.com', code: 'TEST12', used: false },
+  { email: 'gregorygriffin@hotmail.fr', code: 'TEST13', used: false },
+  { email: 'grisel.julien@gmail.com', code: 'TEST14', used: false },
+  { email: 'jefone74@gmail.com', code: 'TEST15', used: false },
+  { email: 'jgbequet@gmail.com', code: 'TEST16', used: false },
+  { email: 'jrdnjan@gmail.com', code: 'TEST17', used: false },
+  { email: 'maymaquennehan@gmail.com', code: 'TEST18', used: false },
+  { email: 'sachaleterrible@gmail.com', code: 'TEST19', used: false },
+  { email: 'scamedescasse@gmail.com', code: 'TEST20', used: false },
+  { email: 'thomas.4.vigneron@gmail.com', code: 'TEST21', used: false },
+];
+  { email: 'antoinelepeurian@gmail.com', code: 'TEST02' },
+  { email: 'aurelie.riotte@gmail.com', code: 'TEST03' },
+  { email: 'barbay.fabien76@gmail.com', code: 'TEST04' },
+  { email: 'beatricelepeurian@gmail.com', code: 'TEST05' },
+  { email: 'bengaillon@yahoo.fr', code: 'TEST06' },
+  { email: 'cavymarion@gmail.com', code: 'TEST07' },
+  { email: 'claireflorianleo@gmail.com', code: 'TEST08' },
+  { email: 'david.matias0330@orange.fr', code: 'TEST09' },
+  { email: 'derrienguillaumecl@gmail.com', code: 'TEST10' },
+  { email: 'ea.aie.aue@gmail.com', code: 'TEST11' },
+  { email: 'gregory.griffin@dalkiafroidsolutions.com', code: 'TEST12' },
+  { email: 'gregorygriffin@hotmail.fr', code: 'TEST13' },
+  { email: 'grisel.julien@gmail.com', code: 'TEST14' },
+  { email: 'jefone74@gmail.com', code: 'TEST15' },
+  { email: 'jgbequet@gmail.com', code: 'TEST16' },
+  { email: 'jrdnjan@gmail.com', code: 'TEST17' },
+  { email: 'maymaquennehan@gmail.com', code: 'TEST18' },
+  { email: 'sachaleterrible@gmail.com', code: 'TEST19' },
+  { email: 'scamedescasse@gmail.com', code: 'TEST20' },
+  { email: 'thomas.4.vigneron@gmail.com', code: 'TEST21' },
+];
+
+const testeurValides = {}; // { deviceId: true }
 app.use(express.json({ limit: '10mb' }));
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
+app.post('/valider-testeur', async (req, res) => {
+  const { email, code, deviceId } = req.body;
+  
+  const testeur = testeurs.find(t => t.email === email && t.code === code);
+  
+  if (!testeur) {
+    return res.json({ valide: false, message: 'Email ou code incorrect' });
+  }
+  
+  if (testeur.used) {
+    return res.json({ valide: false, message: 'Ce code a déjà été utilisé' });
+  }
+  
+  testeur.used = true;
+  testeurValides[deviceId] = true;
+  res.json({ valide: true, message: 'Accès testeur débloqué !' });
+});
 app.post('/recette', async (req, res) => {
   const { ingredients, envie, placard, derniereFormeRef, airfryer, personnes, materiel, deviceId } = req.body;
   const today = new Date().toISOString().split('T')[0];
   if (!compteurs[deviceId]) compteurs[deviceId] = { date: today, count: 0 };
   if (compteurs[deviceId].date !== today) compteurs[deviceId] = { date: today, count: 0 };
-  if (compteurs[deviceId].count >= 1) {
+  if (!testeurValides[deviceId] && compteurs[deviceId].count >= 1) {
     return res.json({ limite: true, message: 'Limite gratuite atteinte' });
   }
   compteurs[deviceId].count++;
@@ -42,6 +106,12 @@ ${envie || 'une recette savoureuse'}
 
 🚫 INGRÉDIENTS À ÉVITER
 aucun
+
+🚫 INTERDICTIONS ABSOLUES — PRIORITÉ CRITIQUE
+- JAMAIS proposer à l'utilisateur d'acheter un produit fini qu'il n'a PAS listé (ex: "achète une brique de velouté").
+- Si l'utilisateur a déjà un produit fini dans son inventaire ou placard (ex: "velouté en brique"), alors l'utiliser comme ingrédient de base et créer une vraie recette qui l'améliore ou l'enrichit.
+- TOUJOURS composer une recette maison, jamais proposer simplement de chauffer un produit industriel seul.
+- Interdit : "achète X" ou "utilise un produit tout fait" si l'utilisateur ne l'a pas listé.
 
 🧺 PLACARD PAR DÉFAUT
 ${placard || 'farine, huile, sel, poivre'}
@@ -217,7 +287,7 @@ app.post('/analyser-photo', async (req, res) => {
   const { image } = req.body;
   try {
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 512,
       messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image }},
