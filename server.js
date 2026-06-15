@@ -74,6 +74,10 @@ app.post('/valider-testeur', async (req, res) => {
 });
 app.post('/recette', async (req, res) => {
   const { ingredients, envie, placard, derniereFormeRef, airfryer, personnes, materiel, deviceId } = req.body;
+  // 🔒 Sécurité : on bloque les entrées trop longues (protège la facture API)
+  if (!ingredients || typeof ingredients !== 'string' || ingredients.length > 2000) {
+    return res.status(400).json({ erreur: 'Liste trop longue (2000 caractères max).' });
+  }
   const today = new Date().toISOString().split('T')[0];
   if (!compteurs[deviceId]) compteurs[deviceId] = { date: today, count: 0 };
   if (compteurs[deviceId].date !== today) compteurs[deviceId] = { date: today, count: 0 };
@@ -303,6 +307,9 @@ app.post('/analyser-photo', async (req, res) => {
 
 app.post('/categoriser', async (req, res) => {
   const { ingredients } = req.body;
+  if (!ingredients || typeof ingredients !== 'string' || ingredients.length > 2000) {
+    return res.status(400).json({ erreur: 'Texte trop long (500 caractères max).' });
+  }
   try {
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
@@ -326,6 +333,9 @@ Categories possibles UNIQUEMENT : viande, poisson, fruitsmer, legume, fruit, lai
 
 app.post('/categoriser-materiel', async (req, res) => {
   const { materiel } = req.body;
+  if (!materiel || typeof materiel !== 'string' || materiel.length > 2000) {
+    return res.status(400).json({ erreur: 'Texte trop long (500 caractères max).' });
+  }
   try {
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
