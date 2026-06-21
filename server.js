@@ -49,14 +49,14 @@ app.post('/valider-testeur', async (req, res) => {
 });
 
 app.post('/recette', async (req, res) => {
-  const { ingredients, envie, placard, derniereFormeRef, airfryer, personnes, materiel, deviceId } = req.body;
+  const { ingredients, envie, placard, derniereFormeRef, airfryer, personnes, materiel, deviceId, premium } = req.body;
   if (!ingredients || typeof ingredients !== 'string' || ingredients.length > 2000) {
     return res.status(400).json({ erreur: 'Liste trop longue (2000 caractères max).' });
   }
   const today = new Date().toISOString().split('T')[0];
   if (!compteurs[deviceId]) compteurs[deviceId] = { date: today, count: 0 };
   if (compteurs[deviceId].date !== today) compteurs[deviceId] = { date: today, count: 0 };
-  if (!testeurValides[deviceId] && compteurs[deviceId].count >= 1) {
+  if (!premium && !testeurValides[deviceId] && compteurs[deviceId].count >= 1) {
     return res.json({ limite: true, message: 'Limite gratuite atteinte' });
   }
   compteurs[deviceId].count++;
