@@ -74,9 +74,9 @@ app.post('/recette', async (req, res) => {
   compteurs[deviceId].count++;
   console.log('Personnes reçues:', personnes);
   try {
-    const reponse = await mistralClient.chat.complete({
-      model: 'mistral-large-latest',
-      maxTokens: 2048,
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2048,
       messages: [{ role: 'user', content: `Tu es un chef cuisinier créatif spécialisé dans les recettes simples, modernes, réalistes et visuellement fortes.
 Ta mission : créer UNE recette maison cohérente à partir des ingrédients fournis par l'utilisateur, en respectant une cuisine simple mais précise, sans erreur technique.
 La recette doit être simple mais jamais plate : peu d'ingrédients, bonne organisation, fraîcheur, contrastes nets, dressage lisible.
@@ -148,10 +148,10 @@ Un vrai conseil en 2-3 phrases minimum.
 ## 🔄 Variante
 Une seule variante simple.` }]
     });
-    res.json({ recette: reponse.choices[0].message.content });
+    res.json({ recette: message.content[0].text });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ erreur: 'Erreur Mistral' });
+    res.status(500).json({ erreur: 'Erreur Claude' });
   }
 });
 
