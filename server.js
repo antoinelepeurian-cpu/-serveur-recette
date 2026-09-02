@@ -75,7 +75,7 @@ app.post('/recette', async (req, res) => {
   console.log('Personnes reçues:', personnes);
   try {
     const reponse = await mistralClient.chat.complete({
-      model: 'mistral-medium-latest',
+      model: 'mistral-large-latest',
       maxTokens: 2048,
       messages: [{ role: 'user', content: `Tu es un chef cuisinier créatif spécialisé dans les recettes simples, modernes, réalistes et visuellement fortes.
 Ta mission : créer UNE recette maison cohérente à partir des ingrédients fournis par l'utilisateur, en respectant une cuisine simple mais précise, sans erreur technique.
