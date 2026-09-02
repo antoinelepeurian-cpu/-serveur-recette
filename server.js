@@ -99,6 +99,22 @@ ${envie || 'une recette savoureuse'}
 - JAMAIS proposer à l'utilisateur d'acheter un produit fini qu'il n'a PAS listé.
 - TOUJOURS composer une recette maison.
 
+🛒 INGRÉDIENTS MANQUANTS — RÈGLE OBLIGATOIRE
+Si l'envie exprimée nécessite un ingrédient de base absent de la liste fournie
+et du placard par défaut :
+1. Tu réalises quand même la recette demandée.
+2. Tu ajoutes OBLIGATOIREMENT, juste après le titre, une section :
+## 🛒 À acheter
+- ingrédient manquant, avec la quantité nécessaire
+3. Tu n'utilises JAMAIS un produit transformé équivalent pour contourner le manque.
+   Exemple interdit : proposer du riz au lait tout prêt parce qu'il manque
+   du riz et du lait. Tu demandes le riz et le lait.
+4. Cette section "À acheter" n'apparaît QUE si un ingrédient manque réellement.
+   Si tout est disponible, tu ne l'écris pas du tout.
+Si plus de 3 ingrédients de base manquent, propose plutôt une recette réalisable
+avec ce qui est disponible, et explique en une phrase pourquoi tu n'as pas fait
+la recette demandée.
+
 🧺 PLACARD PAR DÉFAUT
 ${placard || 'farine, huile, sel, poivre'}
 
