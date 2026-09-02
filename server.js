@@ -1,5 +1,6 @@
 ﻿const express = require('express');
 const Anthropic = require('@anthropic-ai/sdk');
+const { Mistral } = require('@mistralai/mistralai');
 if (process.env.NODE_ENV !== 'production') require('dotenv').config();
 
 const app = express();
@@ -33,6 +34,17 @@ const testeurValides = {};
 app.use(express.json({ limit: '10mb' }));
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const mistralClient = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
+
+// À modifier à chaque nouvelle version publiée sur le Play Store.
+const APP_VERSION_INFO = {
+  latestVersion: '1.0.0',
+  playStoreUrl: 'https://play.google.com/store/apps/details?id=com.ottokitchen.app',
+};
+
+app.get('/version', (req, res) => {
+  res.json(APP_VERSION_INFO);
+});
 
 app.post('/valider-testeur', async (req, res) => {
   const { email, code, deviceId } = req.body;
@@ -167,9 +179,8 @@ app.post('/categoriser', async (req, res) => {
     return res.status(400).json({ erreur: 'Texte trop long (500 caractères max).' });
   }
   try {
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+    const reponse = await mistralClient.chat.complete({
+      model: 'mistral-small-latest',
       messages: [{ role: 'user', content: `Categorise ces ingredients alimentaires : ${ingredients}
 
 Reponds UNIQUEMENT en JSON valide, sans texte avant ou apres, sans backticks.
@@ -178,7 +189,7 @@ Format exact :
 
 Categories possibles UNIQUEMENT : viande, poisson, fruitsmer, legume, fruit, laitage, feculent, epice, herbe, oeuf, sucre, conserve` }]
     });
-    const text = message.content[0].text.trim();
+    const text = reponse.choices[0].message.content.trim();
     const data = JSON.parse(text);
     res.json(data);
   } catch (e) {
@@ -193,9 +204,8 @@ app.post('/categoriser-materiel', async (req, res) => {
     return res.status(400).json({ erreur: 'Texte trop long (500 caractères max).' });
   }
   try {
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+    const reponse = await mistralClient.chat.complete({
+      model: 'mistral-small-latest',
       messages: [{ role: 'user', content: `Categorise ce materiel de cuisine : ${materiel}
 
 Reponds UNIQUEMENT en JSON valide, sans texte avant ou apres, sans backticks.
@@ -204,7 +214,7 @@ Format exact :
 
 Categories possibles UNIQUEMENT : cuisson, electromenager, couteau, ustensile, conservation` }]
     });
-    const text = message.content[0].text.trim();
+    const text = reponse.choices[0].message.content.trim();
     const data = JSON.parse(text);
     res.json(data);
   } catch (e) {
