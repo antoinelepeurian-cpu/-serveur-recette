@@ -60,24 +60,10 @@ app.post('/valider-testeur', async (req, res) => {
   res.json({ valide: true, message: 'Accès testeur débloqué !' });
 });
 
-app.post('/recette', async (req, res) => {
-  const { ingredients, envie, placard, derniereFormeRef, airfryer, personnes, materiel, deviceId, premium } = req.body;
-  if (!ingredients || typeof ingredients !== 'string' || ingredients.length > 2000) {
-    return res.status(400).json({ erreur: 'Liste trop longue (2000 caractères max).' });
-  }
-  const today = new Date().toISOString().split('T')[0];
-  if (!compteurs[deviceId]) compteurs[deviceId] = { date: today, count: 0 };
-  if (compteurs[deviceId].date !== today) compteurs[deviceId] = { date: today, count: 0 };
-  if (!premium && !testeurValides[deviceId] && compteurs[deviceId].count >= 1) {
-    return res.json({ limite: true, message: 'Limite gratuite atteinte' });
-  }
-  compteurs[deviceId].count++;
-  console.log('Personnes reçues:', personnes);
-  try {
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
-      messages: [{ role: 'user', content: `Tu es un chef cuisinier créatif spécialisé dans les recettes simples, modernes, réalistes et visuellement fortes.
+// Prompt de génération de recette, partagé par /recette et /recette-stream.
+// Le texte doit rester identique entre les deux routes.
+function construirePromptRecette({ ingredients, materiel, personnes, envie, placard, derniereFormeRef, airfryer }) {
+  return `Tu es un chef cuisinier créatif spécialisé dans les recettes simples, modernes, réalistes et visuellement fortes.
 Ta mission : créer UNE recette maison cohérente à partir des ingrédients fournis par l'utilisateur, en respectant une cuisine simple mais précise, sans erreur technique.
 La recette doit être simple mais jamais plate : peu d'ingrédients, bonne organisation, fraîcheur, contrastes nets, dressage lisible.
 
@@ -170,12 +156,87 @@ Astuce visuelle pensée pour une vidéo courte.
 Un vrai conseil en 2-3 phrases minimum.
 
 ## 🔄 Variante
-Une seule variante simple.` }]
+Une seule variante simple.`;
+}
+
+app.post('/recette', async (req, res) => {
+  const { ingredients, envie, placard, derniereFormeRef, airfryer, personnes, materiel, deviceId, premium } = req.body;
+  if (!ingredients || typeof ingredients !== 'string' || ingredients.length > 2000) {
+    return res.status(400).json({ erreur: 'Liste trop longue (2000 caractères max).' });
+  }
+  const today = new Date().toISOString().split('T')[0];
+  if (!compteurs[deviceId]) compteurs[deviceId] = { date: today, count: 0 };
+  if (compteurs[deviceId].date !== today) compteurs[deviceId] = { date: today, count: 0 };
+  if (!premium && !testeurValides[deviceId] && compteurs[deviceId].count >= 1) {
+    return res.json({ limite: true, message: 'Limite gratuite atteinte' });
+  }
+  compteurs[deviceId].count++;
+  console.log('Personnes reçues:', personnes);
+  try {
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2048,
+      messages: [{ role: 'user', content: construirePromptRecette({ ingredients, materiel, personnes, envie, placard, derniereFormeRef, airfryer }) }]
     });
     res.json({ recette: message.content[0].text });
   } catch (e) {
     console.error(e);
     res.status(500).json({ erreur: 'Erreur Claude' });
+  }
+});
+
+app.post('/recette-stream', async (req, res) => {
+  const { ingredients, envie, placard, derniereFormeRef, airfryer, personnes, materiel, deviceId, premium } = req.body;
+  if (!ingredients || typeof ingredients !== 'string' || ingredients.length > 2000) {
+    return res.status(400).json({ erreur: 'Liste trop longue (2000 caractères max).' });
+  }
+  const today = new Date().toISOString().split('T')[0];
+  if (!compteurs[deviceId]) compteurs[deviceId] = { date: today, count: 0 };
+  if (compteurs[deviceId].date !== today) compteurs[deviceId] = { date: today, count: 0 };
+  if (!premium && !testeurValides[deviceId] && compteurs[deviceId].count >= 1) {
+    return res.json({ limite: true, message: 'Limite gratuite atteinte' });
+  }
+  compteurs[deviceId].count++;
+  console.log('Personnes reçues (stream):', personnes);
+
+  // Validation et quota geres au-dessus : a partir d'ici le flux SSE est ouvert,
+  // on ne peut plus renvoyer de code HTTP ni de JSON classique.
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+
+  let termine = false;
+  const finirAvecErreur = (e) => {
+    if (termine) return;
+    termine = true;
+    console.error(e);
+    res.write(`event: error\ndata: ${JSON.stringify({ erreur: 'Erreur Claude' })}\n\n`);
+    res.end();
+  };
+
+  try {
+    const stream = client.messages.stream({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2048,
+      messages: [{ role: 'user', content: construirePromptRecette({ ingredients, materiel, personnes, envie, placard, derniereFormeRef, airfryer }) }]
+    });
+
+    stream.on('text', (fragment) => {
+      if (!termine) res.write(`data: ${JSON.stringify({ text: fragment })}\n\n`);
+    });
+
+    stream.on('error', finirAvecErreur);
+
+    await stream.finalMessage();
+    if (!termine) {
+      termine = true;
+      res.write('event: done\ndata: {}\n\n');
+      res.end();
+    }
+  } catch (e) {
+    finirAvecErreur(e);
   }
 });
 
