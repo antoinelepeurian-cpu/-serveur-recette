@@ -248,7 +248,7 @@ app.post('/analyser-photo', async (req, res) => {
       max_tokens: 512,
       messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image }},
-        { type: 'text', text: 'Liste les elements visibles (ingredients alimentaires OU ustensiles de cuisine), separes par des virgules uniquement. Pas de phrase.' }
+        { type: 'text', text: 'Liste uniquement les ingredients alimentaires et les ustensiles de cuisine reellement utilisables pour cuisiner, separes par des virgules uniquement. Pas de phrase. Ignore le mobilier et l\'electromenager (porte, etagere, clayette, bac a legumes, paroi, tiroir) ainsi que les emballages et contenants vides (couvercle, boite, sachet, bocal vide). Si un element visible ne correspond a aucune de ces deux categories, ne le liste pas.' }
       ]}]
     });
     res.json({ ingredients: message.content[0].text });
