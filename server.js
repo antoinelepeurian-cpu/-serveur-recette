@@ -283,7 +283,9 @@ Format exact :
 
 Categories possibles UNIQUEMENT : viande, poisson, fruitsmer, legume, fruit, laitage, feculent, epice, herbe, oeuf, sucre, conserve` }]
     });
-    const text = message.content[0].text.trim();
+    const brut = message.content[0].text;
+    // Claude entoure parfois le JSON de ```json ... ``` : on ne garde que l'objet.
+    const text = brut.slice(brut.indexOf('{'), brut.lastIndexOf('}') + 1);
     const data = JSON.parse(text);
     res.json(data);
   } catch (e) {
@@ -309,7 +311,9 @@ Format exact :
 
 Categories possibles UNIQUEMENT : cuisson, electromenager, couteau, ustensile, conservation` }]
     });
-    const text = message.content[0].text.trim();
+    const brut = message.content[0].text;
+    // Claude entoure parfois le JSON de ```json ... ``` : on ne garde que l'objet.
+    const text = brut.slice(brut.indexOf('{'), brut.lastIndexOf('}') + 1);
     const data = JSON.parse(text);
     res.json(data);
   } catch (e) {
