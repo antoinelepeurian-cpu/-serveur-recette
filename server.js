@@ -1,6 +1,5 @@
 ﻿const express = require('express');
 const Anthropic = require('@anthropic-ai/sdk');
-const { Mistral } = require('@mistralai/mistralai');
 if (process.env.NODE_ENV !== 'production') require('dotenv').config();
 
 const app = express();
@@ -34,7 +33,6 @@ const testeurValides = {};
 app.use(express.json({ limit: '10mb' }));
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const mistralClient = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
 
 // À modifier à chaque nouvelle version publiée sur le Play Store.
 const APP_VERSION_INFO = {
@@ -240,15 +238,25 @@ app.post('/recette-stream', async (req, res) => {
   }
 });
 
+// Un prompt par type de photo. Sans "type" (ou avec une valeur inconnue),
+// on garde l'ancien prompt pour ne pas casser les versions deja publiees de l'app.
+const PROMPTS_PHOTO = {
+  aliments: 'Liste uniquement les aliments comestibles visibles, separes par des virgules uniquement. Pas de phrase. Ignore tout materiel et ustensile de cuisine, le mobilier et l\'electromenager (porte, etagere, clayette, bac, tiroir, paroi), les emballages et contenants vides, ainsi que tout element de decor. Si un element visible ne se mange pas, ne le liste pas.',
+  materiel: 'Liste uniquement le materiel de cuisine utilisable pour cuisiner (par exemple poele, casserole, Thermomix, Cookeo, airfryer, robot, couteau), separes par des virgules uniquement. Pas de phrase. Ignore tout aliment, ainsi que le mobilier et l\'electromenager encastre (porte de frigo, plan de travail, evier) et tout element de decor. Si un element visible ne sert pas a cuisiner, ne le liste pas.',
+  placard: 'Liste uniquement les ingredients et denrees de placard visibles (par exemple pates, riz, farine, conserves, epices, huile, sucre), separes par des virgules uniquement. Pas de phrase. Ignore tout materiel et ustensile de cuisine, le mobilier (porte, etagere, tiroir), les contenants vides, ainsi que tout element de decor. Si un element visible ne se mange pas, ne le liste pas.',
+};
+const PROMPT_PHOTO_DEFAUT = 'Liste uniquement les ingredients alimentaires et les ustensiles de cuisine reellement utilisables pour cuisiner, separes par des virgules uniquement. Pas de phrase. Ignore le mobilier et l\'electromenager (porte, etagere, clayette, bac a legumes, paroi, tiroir), les emballages et contenants vides (couvercle, boite, sachet, bocal vide), ainsi que tout element de decor ou d\'environnement qui ne se cuisine pas et ne sert pas a cuisiner (carrelage, mur, sol, plafond, plan de travail, cable, prise electrique, interrupteur, luminaire, decoration). Si un element visible ne correspond a aucune de ces deux categories, ne le liste pas.';
+
 app.post('/analyser-photo', async (req, res) => {
-  const { image } = req.body;
+  const { image, type } = req.body;
+  const prompt = Object.hasOwn(PROMPTS_PHOTO, type) ? PROMPTS_PHOTO[type] : PROMPT_PHOTO_DEFAUT;
   try {
     const message = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 512,
       messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image }},
-        { type: 'text', text: 'Liste uniquement les ingredients alimentaires et les ustensiles de cuisine reellement utilisables pour cuisiner, separes par des virgules uniquement. Pas de phrase. Ignore le mobilier et l\'electromenager (porte, etagere, clayette, bac a legumes, paroi, tiroir), les emballages et contenants vides (couvercle, boite, sachet, bocal vide), ainsi que tout element de decor ou d\'environnement qui ne se cuisine pas et ne sert pas a cuisiner (carrelage, mur, sol, plafond, plan de travail, cable, prise electrique, interrupteur, luminaire, decoration). Si un element visible ne correspond a aucune de ces deux categories, ne le liste pas.' }
+        { type: 'text', text: prompt }
       ]}]
     });
     res.json({ ingredients: message.content[0].text });
@@ -264,8 +272,9 @@ app.post('/categoriser', async (req, res) => {
     return res.status(400).json({ erreur: 'Texte trop long (500 caractères max).' });
   }
   try {
-    const reponse = await mistralClient.chat.complete({
-      model: 'mistral-small-latest',
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
       messages: [{ role: 'user', content: `Categorise ces ingredients alimentaires : ${ingredients}
 
 Reponds UNIQUEMENT en JSON valide, sans texte avant ou apres, sans backticks.
@@ -274,12 +283,12 @@ Format exact :
 
 Categories possibles UNIQUEMENT : viande, poisson, fruitsmer, legume, fruit, laitage, feculent, epice, herbe, oeuf, sucre, conserve` }]
     });
-    const text = reponse.choices[0].message.content.trim();
+    const text = message.content[0].text.trim();
     const data = JSON.parse(text);
     res.json(data);
   } catch (e) {
     console.error(e);
-    res.status(500).json({ erreur: 'Erreur categorisation' });
+    res.status(500).json({ erreur: 'Erreur Claude' });
   }
 });
 
@@ -289,8 +298,9 @@ app.post('/categoriser-materiel', async (req, res) => {
     return res.status(400).json({ erreur: 'Texte trop long (500 caractères max).' });
   }
   try {
-    const reponse = await mistralClient.chat.complete({
-      model: 'mistral-small-latest',
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
       messages: [{ role: 'user', content: `Categorise ce materiel de cuisine : ${materiel}
 
 Reponds UNIQUEMENT en JSON valide, sans texte avant ou apres, sans backticks.
@@ -299,12 +309,12 @@ Format exact :
 
 Categories possibles UNIQUEMENT : cuisson, electromenager, couteau, ustensile, conservation` }]
     });
-    const text = reponse.choices[0].message.content.trim();
+    const text = message.content[0].text.trim();
     const data = JSON.parse(text);
     res.json(data);
   } catch (e) {
     console.error(e);
-    res.status(500).json({ erreur: 'Erreur categorisation materiel' });
+    res.status(500).json({ erreur: 'Erreur Claude' });
   }
 });
 
